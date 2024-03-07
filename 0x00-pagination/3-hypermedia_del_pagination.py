@@ -5,7 +5,7 @@ Deletion-resilient hypermedia pagination
 
 import csv
 import math
-from typing import List
+from typing import Dict, List, Optional
 
 
 class Server:
@@ -44,29 +44,24 @@ class Server:
         Retrieve information about the paginated dataset
         based on a specific index in a hypermedia-friendly format.
         """
-        assert index is None or (isinstance(index, int) and index >= 0),\
-            "Index must be None or a non-negative integer"
-        assert isinstance(page_size, int) and page_size > 0,\
-            "Page size must be an integer greater than 0"
 
-        dataset = self.dataset()
-        current_index = index if index is not None else 0
+        dataset = self.indexed_dataset()
 
-        # Verify that the current index is within a valid range
-        assert current_index < len(dataset), "Index is out of range"
+        index = 0 if index is None else index
+        assert 0 <= index < len(dataset), "Index is out of range"
 
-        # Calculate the start and end indices for the current page
-        start_index = current_index
-        end_index = current_index + page_size
+        while index < len(dataset) and dataset[index] is None:
+            index += 1
 
-        # Verify that the end index is within the dataset range
-        if end_index > len(dataset):
-            end_index = len(dataset)
+        end_index = index + page_size
+        end_index = min(end_index, len(dataset))
+        next_index = end_index
 
         # Return the dictionary with the requested information
         return {
-            "index": start_index,
-            "next_index": end_index,
+            "index": index,
+            "next_index": next_index,
             "page_size": page_size,
-            "data": dataset[start_index:end_index]
+            "data": [dataset[i] for i in range(index, end_index)
+                     if dataset[i] is not None]
         }
